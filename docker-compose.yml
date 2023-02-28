@@ -1,30 +1,54 @@
 version: '3.9'
 
 services:
-  # Сервис для разворачивания контейнера с приложением
-  app:
-    ports:
-      - "8080:8080"
+  api:
+    container_name: simbirsoft.api
     build:
       context: .
-#    depends_on:
-#      - database
-#    environment:
-#      - SPRING_DATASOURCE_URL=jdbc:postgresql://db:5432/animal-chipization
-#      - POSTGRES_USER=user
-#      - POSTGRES_PASSWORD=password
+      dockerfile: Dockerfile
+    depends_on:
+    - postgres
+    expose:
+    - '8080'
+    ports:
+    - "8080:8080"
+    networks:
+    - simbirsoft.api.network
+    - simbirsoft.postgres.network
+    env_file:
+    - .env
 
+  postgres:
+    image: postgres
+    container_name: simbirsoft.postgres
+    restart: unless-stopped
+    volumes:
+    - simbirsoft.postgres.data:/var/lib/postgresql/data:rw
+    networks:
+    - simbirsoft.postgres.network
+    env_file:
+    - .env
+    ports:
+    - "127.0.0.1:5432:5432"
 
-  # Сервис для разворачивания контейнера с автотестами
   tests:
     image: mrexpen/planet_olymp_phase1
     pull_policy: always
     ports:
-      - "8090:8080"
+    - "8090:8080"
     depends_on:
-      - app
+    - api
+    networks:
+    - simbirsoft.postgres.network
     environment:
-      SERVER_URL: http://app:8080
+      SERVER_URL: http://api:8080
       STAGE: 0
       # 0, 1 или 2 - запуск тестов для соответствующего этапа
       # all - запуск всех тестов из трёх доступных этапов
+
+volumes:
+  simbirsoft.postgres.data:
+
+networks:
+  simbirsoft.postgres.network:
+  simbirsoft.api.network:
