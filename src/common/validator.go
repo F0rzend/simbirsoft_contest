@@ -18,7 +18,7 @@ type TranslatedValidator struct {
 	translator ut.Translator
 }
 
-func NewTranslatedValidator() *TranslatedValidator {
+func NewTranslatedValidator() (*TranslatedValidator, error) {
 	validate := validator.New()
 
 	validate.RegisterTagNameFunc(func(fld reflect.StructField) string {
@@ -34,13 +34,13 @@ func NewTranslatedValidator() *TranslatedValidator {
 
 	translator, _ := uni.GetTranslator("en")
 	if err := envalidator.RegisterDefaultTranslations(validate, translator); err != nil {
-		panic(err)
+		return nil, errors.Wrap(err, "error while register validator translation")
 	}
 
 	return &TranslatedValidator{
 		validate:   validate,
 		translator: translator,
-	}
+	}, nil
 }
 
 func (v *TranslatedValidator) ValidateStruct(r any) error {

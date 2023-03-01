@@ -26,8 +26,11 @@ func NewServer() *Server {
 	}
 }
 
-func (s *Server) GetHTTPHandler(logger *zerolog.Logger) http.Handler {
-	translatedValidator := common.NewTranslatedValidator()
+func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
+	translatedValidator, err := common.NewTranslatedValidator()
+	if err != nil {
+		return nil, err
+	}
 
 	r := chi.NewRouter()
 
@@ -56,7 +59,7 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) http.Handler {
 
 	r.Post("/registration", s.account.Registration)
 
-	return r
+	return r, nil
 }
 
 func healthcheck(w http.ResponseWriter, _ *http.Request) {

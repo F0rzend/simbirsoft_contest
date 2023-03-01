@@ -21,9 +21,14 @@ func main() {
 
 	apiServer := api.NewServer()
 
+	handler, err := apiServer.GetHTTPHandler(&logger)
+	if err != nil {
+		panic(err)
+	}
+
 	server := http.Server{
 		Addr:              ADDRESS,
-		Handler:           apiServer.GetHTTPHandler(&logger),
+		Handler:           handler,
 		ReadHeaderTimeout: 3 * time.Second,
 	}
 
