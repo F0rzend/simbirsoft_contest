@@ -22,9 +22,9 @@ func main() {
 	apiServer := api.NewServer()
 
 	server := http.Server{
-		Addr:              ":8090",
-		Handler:           apiServer.GetHTTPHandler(),
-		ReadHeaderTimeout: 3 * time.Second, //nolint:gomnd
+		Addr:              ADDRESS,
+		Handler:           apiServer.GetHTTPHandler(&logger),
+		ReadHeaderTimeout: 3 * time.Second,
 	}
 
 	logger.Info().Msgf("Server is running on %q", ADDRESS)

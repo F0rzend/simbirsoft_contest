@@ -39,7 +39,7 @@ services:
     depends_on:
     - api
     networks:
-    - simbirsoft.postgres.network
+    - simbirsoft.api.network
     environment:
       SERVER_URL: http://api:8080
       STAGE: 0

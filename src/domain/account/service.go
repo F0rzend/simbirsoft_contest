@@ -9,3 +9,5 @@ func NewService() *Service {
 		repository: NewRepository(),
 	}
 }
+
+func (s *Service) Register() {}

@@ -56,6 +56,7 @@ linters:
   - cyclop
   - deadcode            # [deprecated] Finds unused code
   - depguard            # : Go linter that checks if package imports are in a list of acceptable packages [fast: false, auto-fix: false]
+  - errorlint
   - exhaustivestruct    # [deprecated]: Checks if all struct's fields are initialized [fast: false, auto-fix: false]
   - exhaustruct         # : Checks if all struct's fields are initialized [fast: false, auto-fix: false]
   - forbidigo           # : Forbids identifiers [fast: true, auto-fix: false]

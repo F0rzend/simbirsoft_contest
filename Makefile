@@ -20,3 +20,7 @@ new_migration: ## create new migration
 .PHONY: goose
 goose: ## get migrations status
 	@$(GOOSE) status
+
+.PHONY: pre-commit
+pre-commit: ## run linters and formatters via pre-commit
+	@pre-commit run --all-files
