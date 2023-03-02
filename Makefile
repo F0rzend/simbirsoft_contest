@@ -13,6 +13,11 @@ help:
 migrate: ## update database to latest migration
 	@$(GOOSE) up
 
+.PHONY: downgrade
+downgrade:  ## downgrade db migrations
+	@$(GOOSE) down
+
+type ?= sql
 .PHONY: new_migration
 new_migration: ## create new migration
 	@$(GOOSE) create ${name} ${type}

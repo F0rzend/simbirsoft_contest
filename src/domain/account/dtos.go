@@ -7,17 +7,28 @@ import (
 )
 
 type RegistrationRequest struct {
-	FirstName string `json:"firstName" validate:"required"`
-	LastName  string `json:"lastName" validate:"required"`
+	FirstName string `json:"firstName" validate:"required,alphanum"`
+	LastName  string `json:"lastName" validate:"required,alphanum"`
 	Email     string `json:"email" validate:"required,email"`
-	Password  string `json:"password" validate:"required"`
+	Password  string `json:"password" validate:"required,alphanum"`
 }
 
-func (r *RegistrationRequest) Bind(req *http.Request) error {
-	validator, err := common.TranslatedValidatorFromRequest(req)
+func (rr *RegistrationRequest) Bind(request *http.Request) error {
+	validator, err := common.TranslatedValidatorFromRequest(request)
 	if err != nil {
 		return err
 	}
 
-	return validator.ValidateStruct(r)
+	return validator.ValidateStruct(rr)
+}
+
+type RegistrationResponse struct {
+	ID        uint   `json:"id"`
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"email"`
+}
+
+func (rr *RegistrationResponse) Render(w http.ResponseWriter, r *http.Request) error {
+	return nil
 }

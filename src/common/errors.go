@@ -14,7 +14,8 @@ import (
 
 const (
 	InternalServerErrorType = "InternalServerError"
-	ValidationErrorType     = "BadRequest"
+	ValidationErrorType     = "ValidationError"
+	ConflictErrorType       = "ConflictError"
 )
 
 func RenderError(w http.ResponseWriter, r *http.Request, err error) {
@@ -101,5 +102,20 @@ func NewValidationError(invalid []InvalidRequestParameter) *ValidationError {
 		BaseHTTPError: NewBaseHTTPError(ValidationErrorType, http.StatusBadRequest),
 		Title:         "Your request parameters didn't validate.",
 		InvalidParams: invalid,
+	}
+}
+
+type ConflictError struct {
+	*BaseHTTPError
+
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+func NewConflictError(description string) *ConflictError {
+	return &ConflictError{
+		BaseHTTPError: NewBaseHTTPError(ConflictErrorType, http.StatusConflict),
+		Title:         "A data conflict has occurred.",
+		Description:   description,
 	}
 }

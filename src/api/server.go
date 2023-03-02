@@ -20,10 +20,15 @@ type Server struct {
 	account *account.Handlers
 }
 
-func NewServer() *Server {
-	return &Server{
-		account: account.NewHandlers(),
+func NewServer(config *common.Config) (*Server, error) {
+	accountHandlers, err := account.NewHandlers(config)
+	if err != nil {
+		return nil, err
 	}
+
+	return &Server{
+		account: accountHandlers,
+	}, nil
 }
 
 func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {

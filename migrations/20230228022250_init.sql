@@ -1,10 +1,10 @@
 -- +goose Up
 -- +goose StatementBegin
 CREATE TABLE account(
-                        id INTEGER PRIMARY KEY,
-                        first_name VARCHAR,
-                        last_name VARCHAR,
-                        email VARCHAR
+    id integer PRIMARY KEY,
+    first_name varchar,
+    last_name varchar,
+    email varchar
 );
 -- +goose StatementEnd
 
