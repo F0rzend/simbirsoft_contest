@@ -70,5 +70,16 @@ func (s *Service) Register(
 }
 
 func (s *Service) GetAccount(ctx context.Context, id uint) (*Entity, error) {
-	return s.repository.GetAccount(ctx, id)
+	account, err := s.repository.GetAccount(ctx, id)
+	if err != nil {
+		if errors.Is(err, ErrNotFound) {
+			return nil, common.NewNotFoundError(
+				"Account not found.",
+				fmt.Sprintf("Account with id %d not found.", id),
+			)
+		}
+		return nil, err
+	}
+
+	return account, nil
 }

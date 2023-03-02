@@ -2,15 +2,14 @@ package account
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
-
-	"github.com/F0rzend/simbirsoft_contest/src/common"
 )
+
+var ErrNotFound = errors.New("not found")
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -103,10 +102,7 @@ func (r *Repository) GetAccount(ctx context.Context, id uint) (*Entity, error) {
 		&email,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, common.NewNotFoundError(
-				"Account not found.",
-				fmt.Sprintf("Account with id %d not found.", id),
-			)
+			return nil, ErrNotFound
 		}
 
 		return nil, errors.Wrap(err, "cannot get account by id")

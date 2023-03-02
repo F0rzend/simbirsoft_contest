@@ -5,7 +5,6 @@ services:
     container_name: simbirsoft.api
     build:
       context: .
-      dockerfile: Dockerfile
     depends_on:
     - postgres
     expose:
@@ -18,10 +17,22 @@ services:
     env_file:
     - .env
 
+  migrations:
+    profiles:
+    - migrate
+    container_name: simbirsoft.migrations
+    build:
+      context: migrations
+    depends_on:
+    - postgres
+    networks:
+    - simbirsoft.postgres.network
+    env_file:
+    - .env
+
   postgres:
     image: postgres
     container_name: simbirsoft.postgres
-    restart: unless-stopped
     volumes:
     - simbirsoft.postgres.data:/var/lib/postgresql/data:rw
     networks:
@@ -32,6 +43,9 @@ services:
     - "127.0.0.1:5432:5432"
 
   tests:
+    container_name: simbirsoft.tests
+    profiles:
+    - test
     image: mrexpen/planet_olymp_phase1
     pull_policy: always
     ports:
@@ -48,7 +62,11 @@ services:
 
 volumes:
   simbirsoft.postgres.data:
+    name: simbirsoft.postgres.data
 
 networks:
   simbirsoft.postgres.network:
+    name: simbirsoft.postgres.network
+
   simbirsoft.api.network:
+    name: simbirsoft.api.network
