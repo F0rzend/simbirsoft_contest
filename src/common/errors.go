@@ -9,7 +9,7 @@ import (
 
 	"github.com/go-chi/render"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog/hlog"
+	"github.com/rs/zerolog"
 )
 
 const (
@@ -39,63 +39,59 @@ func RenderError(w http.ResponseWriter, r *http.Request, err error) {
 	RenderError(w, r, NewInternalServerError(err))
 }
 
-type BaseHTTPError struct {
-	ErrorType string `json:"type"`
-	Title     string `json:"title"`
-	Status    int    `json:"status"`
+type HTTPError struct {
+	Type     string `json:"type"`
+	Status   int    `json:"status"`
+	Title    string `json:"title,omitempty"`
+	Detail   string `json:"detail,omitempty"`
+	Instance string `json:"instance,omitempty"`
+
+	err error
 }
 
-func (e *BaseHTTPError) Error() string {
-	return e.ErrorType
+func (e *HTTPError) Error() string {
+	return e.Title
 }
 
-func (e *BaseHTTPError) Render(_ http.ResponseWriter, r *http.Request) error {
+func (e *HTTPError) Unwrap() error {
+	if e.err != nil {
+		return e.err
+	}
+
+	return e
+}
+
+func (e *HTTPError) Render(_ http.ResponseWriter, r *http.Request) error {
+	if e.err != nil {
+		zerolog.Ctx(r.Context()).Error().Err(e.err).Send()
+	}
+
 	render.Status(r, e.Status)
 
 	return nil
 }
 
-func NewBaseHTTPError(errorType, title string, status int) *BaseHTTPError {
-	return &BaseHTTPError{
-		ErrorType: errorType,
-		Title:     title,
-		Status:    status,
+func NewInternalServerError(err error) error {
+	return &HTTPError{
+		Type:   InternalServerErrorType,
+		Status: http.StatusInternalServerError,
+		Title:  "Error on our side.",
+		err:    err,
 	}
 }
 
-type InternalServerError struct {
-	*BaseHTTPError
-
-	err error
-}
-
-func NewInternalServerError(err error) *InternalServerError {
-	return &InternalServerError{
-		BaseHTTPError: NewBaseHTTPError(
-			InternalServerErrorType,
-			"Error on our side.",
-			http.StatusInternalServerError,
-		),
-		err: err,
+func NewValidationError(invalid ...InvalidRequestParameter) error {
+	return &struct {
+		*HTTPError
+		InvalidParams []InvalidRequestParameter `json:"invalidParams,omitempty"`
+	}{
+		HTTPError: &HTTPError{
+			Type:   ValidationErrorType,
+			Status: http.StatusBadRequest,
+			Title:  "You request params didn't validate.",
+		},
+		InvalidParams: invalid,
 	}
-}
-
-func (e *InternalServerError) Render(w http.ResponseWriter, r *http.Request) error {
-	if err := e.BaseHTTPError.Render(w, r); err != nil {
-		return err
-	}
-
-	logger := hlog.FromRequest(r)
-
-	logger.Error().Err(e.err).Send()
-
-	return nil
-}
-
-type ValidationError struct {
-	*BaseHTTPError
-
-	InvalidParams []InvalidRequestParameter `json:"invalidParams,omitempty"`
 }
 
 type InvalidRequestParameter struct {
@@ -103,47 +99,20 @@ type InvalidRequestParameter struct {
 	Reason string `json:"reason"`
 }
 
-func NewValidationError(invalid ...InvalidRequestParameter) *ValidationError {
-	return &ValidationError{
-		BaseHTTPError: NewBaseHTTPError(
-			ValidationErrorType,
-			"Your request parameters didn't validate.",
-			http.StatusBadRequest,
-		),
-		InvalidParams: invalid,
+func NewConflictError(detail string) error {
+	return &HTTPError{
+		Type:   ConflictErrorType,
+		Status: http.StatusConflict,
+		Title:  "A data conflict has occurred.",
+		Detail: detail,
 	}
 }
 
-type ConflictError struct {
-	*BaseHTTPError
-
-	Description string `json:"description"`
-}
-
-func NewConflictError(description string) *ConflictError {
-	return &ConflictError{
-		BaseHTTPError: NewBaseHTTPError(
-			ConflictErrorType,
-			"A data conflict has occurred.",
-			http.StatusConflict,
-		),
-		Description: description,
-	}
-}
-
-type NotFoundError struct {
-	*BaseHTTPError
-
-	Description string `json:"description"`
-}
-
-func NewNotFoundError(title, description string) *NotFoundError {
-	return &NotFoundError{
-		BaseHTTPError: NewBaseHTTPError(
-			NotFoundErrorType,
-			title,
-			http.StatusNotFound,
-		),
-		Description: description,
+func NewNotFoundError(title, detail string) error {
+	return &HTTPError{
+		Type:   NotFoundErrorType,
+		Status: http.StatusNotFound,
+		Title:  title,
+		Detail: detail,
 	}
 }

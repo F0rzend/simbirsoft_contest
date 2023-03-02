@@ -10,11 +10,11 @@ help: ## Display this help
 
 .PHONY: startup
 startup: ## Run application first time. It apply migrations and run application in docker
-	docker compose --profile migrate up
+	docker compose --profile migrate up --build
 
 .PHONY: contest
 contest: ## Run application contest e2e tests
-	docker compose --profile test up
+	docker compose --profile test up --build
 
 ##@ Database
 
