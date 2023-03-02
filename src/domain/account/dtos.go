@@ -22,13 +22,13 @@ func (rr *RegistrationRequest) Bind(request *http.Request) error {
 	return validator.ValidateStruct(rr)
 }
 
-type RegistrationResponse struct {
+type Response struct {
 	ID        uint   `json:"id"`
 	FirstName string `json:"firstName"`
 	LastName  string `json:"lastName"`
 	Email     string `json:"email"`
 }
 
-func (rr *RegistrationResponse) Render(w http.ResponseWriter, r *http.Request) error {
+func (rr *Response) Render(w http.ResponseWriter, r *http.Request) error {
 	return nil
 }

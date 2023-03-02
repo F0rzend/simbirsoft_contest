@@ -66,7 +66,33 @@ func (v *TranslatedValidator) ValidateStruct(r any) error {
 		}
 	}
 
-	return NewValidationError(invalidParams)
+	return NewValidationError(invalidParams...)
+}
+
+func (v *TranslatedValidator) ValidateVar(key string, value any, tag string) error {
+	err := v.validate.Var(value, tag)
+	if err == nil {
+		return nil
+	}
+
+	if _, ok := err.(*validator.InvalidValidationError); ok {
+		return err
+	}
+
+	errs, ok := err.(validator.ValidationErrors)
+	if !ok {
+		return err
+	}
+
+	invalidParams := make([]InvalidRequestParameter, len(errs))
+	for i, err := range errs {
+		invalidParams[i] = InvalidRequestParameter{
+			Name:   key,
+			Reason: strings.TrimSpace(err.Translate(v.translator)),
+		}
+	}
+
+	return NewValidationError(invalidParams...)
 }
 
 type ctxKey struct {

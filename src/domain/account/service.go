@@ -68,3 +68,7 @@ func (s *Service) Register(
 
 	return entity, nil
 }
+
+func (s *Service) GetAccount(ctx context.Context, id uint) (*Entity, error) {
+	return s.repository.GetAccount(ctx, id)
+}

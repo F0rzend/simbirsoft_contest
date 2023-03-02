@@ -16,6 +16,7 @@ const (
 	InternalServerErrorType = "InternalServerError"
 	ValidationErrorType     = "ValidationError"
 	ConflictErrorType       = "ConflictError"
+	NotFoundErrorType       = "NotFoundError"
 )
 
 func RenderError(w http.ResponseWriter, r *http.Request, err error) {
@@ -40,6 +41,7 @@ func RenderError(w http.ResponseWriter, r *http.Request, err error) {
 
 type BaseHTTPError struct {
 	ErrorType string `json:"type"`
+	Title     string `json:"title"`
 	Status    int    `json:"status"`
 }
 
@@ -53,9 +55,10 @@ func (e *BaseHTTPError) Render(_ http.ResponseWriter, r *http.Request) error {
 	return nil
 }
 
-func NewBaseHTTPError(errorType string, status int) *BaseHTTPError {
+func NewBaseHTTPError(errorType, title string, status int) *BaseHTTPError {
 	return &BaseHTTPError{
 		ErrorType: errorType,
+		Title:     title,
 		Status:    status,
 	}
 }
@@ -68,8 +71,12 @@ type InternalServerError struct {
 
 func NewInternalServerError(err error) *InternalServerError {
 	return &InternalServerError{
-		BaseHTTPError: NewBaseHTTPError(InternalServerErrorType, http.StatusInternalServerError),
-		err:           err,
+		BaseHTTPError: NewBaseHTTPError(
+			InternalServerErrorType,
+			"Error on our side.",
+			http.StatusInternalServerError,
+		),
+		err: err,
 	}
 }
 
@@ -88,7 +95,6 @@ func (e *InternalServerError) Render(w http.ResponseWriter, r *http.Request) err
 type ValidationError struct {
 	*BaseHTTPError
 
-	Title         string                    `json:"title"`
 	InvalidParams []InvalidRequestParameter `json:"invalidParams,omitempty"`
 }
 
@@ -97,10 +103,13 @@ type InvalidRequestParameter struct {
 	Reason string `json:"reason"`
 }
 
-func NewValidationError(invalid []InvalidRequestParameter) *ValidationError {
+func NewValidationError(invalid ...InvalidRequestParameter) *ValidationError {
 	return &ValidationError{
-		BaseHTTPError: NewBaseHTTPError(ValidationErrorType, http.StatusBadRequest),
-		Title:         "Your request parameters didn't validate.",
+		BaseHTTPError: NewBaseHTTPError(
+			ValidationErrorType,
+			"Your request parameters didn't validate.",
+			http.StatusBadRequest,
+		),
 		InvalidParams: invalid,
 	}
 }
@@ -108,14 +117,33 @@ func NewValidationError(invalid []InvalidRequestParameter) *ValidationError {
 type ConflictError struct {
 	*BaseHTTPError
 
-	Title       string `json:"title"`
 	Description string `json:"description"`
 }
 
 func NewConflictError(description string) *ConflictError {
 	return &ConflictError{
-		BaseHTTPError: NewBaseHTTPError(ConflictErrorType, http.StatusConflict),
-		Title:         "A data conflict has occurred.",
-		Description:   description,
+		BaseHTTPError: NewBaseHTTPError(
+			ConflictErrorType,
+			"A data conflict has occurred.",
+			http.StatusConflict,
+		),
+		Description: description,
+	}
+}
+
+type NotFoundError struct {
+	*BaseHTTPError
+
+	Description string `json:"description"`
+}
+
+func NewNotFoundError(title, description string) *NotFoundError {
+	return &NotFoundError{
+		BaseHTTPError: NewBaseHTTPError(
+			NotFoundErrorType,
+			title,
+			http.StatusNotFound,
+		),
+		Description: description,
 	}
 }

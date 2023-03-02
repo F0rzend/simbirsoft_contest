@@ -2,12 +2,14 @@ package account
 
 import (
 	"context"
-	"time"
+	"fmt"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"github.com/rs/zerolog"
+
+	"github.com/F0rzend/simbirsoft_contest/src/common"
 )
 
 type Repository struct {
@@ -15,10 +17,7 @@ type Repository struct {
 }
 
 func NewRepository(pool *pgxpool.Pool) (*Repository, error) {
-	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Second)
-	defer cancel()
-
-	if err := pool.Ping(ctx); err != nil {
+	if err := pool.Ping(context.Background()); err != nil {
 		return nil, errors.Wrap(err, "unable to connect to database")
 	}
 
@@ -76,19 +75,47 @@ func (r *Repository) Save(
 		WHERE account.id = excluded.id
 	`
 
-	if _, err := r.db.Exec(
-		ctx,
-		query,
-		pgx.NamedArgs{
-			"id":         entity.ID,
-			"first_name": entity.FirstName,
-			"last_name":  entity.LastName,
-			"email":      entity.Email.Address,
-			"password":   passwordHash,
-		},
-	); err != nil {
+	if _, err := r.db.Exec(ctx, query, pgx.NamedArgs{
+		"id":         entity.ID,
+		"first_name": entity.FirstName,
+		"last_name":  entity.LastName,
+		"email":      entity.Email.Address,
+		"password":   passwordHash,
+	}); err != nil {
 		return errors.Wrap(err, "error while saving the account")
 	}
 
 	return nil
+}
+
+func (r *Repository) GetAccount(ctx context.Context, id uint) (*Entity, error) {
+	query := `
+		SELECT first_name, last_name, email FROM account
+		WHERE id = @id
+	`
+
+	var firstName, lastName, email string
+	if err := r.db.QueryRow(ctx, query, pgx.NamedArgs{
+		"id": id,
+	}).Scan(
+		&firstName,
+		&lastName,
+		&email,
+	); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, common.NewNotFoundError(
+				"Account not found.",
+				fmt.Sprintf("Account with id %d not found.", id),
+			)
+		}
+
+		return nil, errors.Wrap(err, "cannot get account by id")
+	}
+
+	entity, err := NewEntity(id, firstName, lastName, email)
+	if err != nil {
+		return nil, err
+	}
+
+	return entity, nil
 }

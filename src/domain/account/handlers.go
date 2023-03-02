@@ -2,7 +2,9 @@ package account
 
 import (
 	"net/http"
+	"strconv"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 
 	"github.com/F0rzend/simbirsoft_contest/src/common"
@@ -45,7 +47,7 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	response := &RegistrationResponse{
+	response := &Response{
 		ID:        entity.ID,
 		FirstName: entity.FirstName,
 		LastName:  entity.LastName,
@@ -57,4 +59,56 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 		common.RenderError(w, r, err)
 		return
 	}
+}
+
+func (h *Handlers) GetAccount(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	id, err := getIDFromRequest(r)
+	if err != nil {
+		common.RenderError(w, r, err)
+		return
+	}
+
+	entity, err := h.service.GetAccount(ctx, id)
+	if err != nil {
+		common.RenderError(w, r, err)
+		return
+	}
+
+	response := &Response{
+		ID:        entity.ID,
+		FirstName: entity.FirstName,
+		LastName:  entity.LastName,
+		Email:     entity.Email.Address,
+	}
+
+	render.Status(r, http.StatusOK)
+	if err := render.Render(w, r, response); err != nil {
+		common.RenderError(w, r, err)
+		return
+	}
+}
+
+func getIDFromRequest(r *http.Request) (uint, error) {
+	param := chi.URLParam(r, "id")
+
+	id, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		return 0, common.NewValidationError(common.InvalidRequestParameter{
+			Name:   "id",
+			Reason: "id must be a number",
+		})
+	}
+
+	validator, err := common.TranslatedValidatorFromRequest(r)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := validator.ValidateVar("id", id, "required,gt=0"); err != nil {
+		return 0, err
+	}
+
+	return uint(id), err
 }

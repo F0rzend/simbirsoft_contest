@@ -63,6 +63,7 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 	r.Get("/healthcheck", healthcheck)
 
 	r.Post("/registration", s.account.Registration)
+	r.Get("/accounts/{id}", s.account.GetAccount)
 
 	return r, nil
 }

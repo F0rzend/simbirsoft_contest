@@ -3,7 +3,7 @@ package account
 import (
 	"net/mail"
 
-	"github.com/pkg/errors"
+	"github.com/F0rzend/simbirsoft_contest/src/common"
 )
 
 type Entity struct {
@@ -16,7 +16,10 @@ type Entity struct {
 func NewEntity(id uint, firstName, lastName, email string) (*Entity, error) {
 	mailAddress, err := mail.ParseAddress(email)
 	if err != nil {
-		return nil, errors.Wrap(err, "Error parsing error")
+		return nil, common.NewValidationError(common.InvalidRequestParameter{
+			Name:   "email",
+			Reason: "email is invalid",
+		})
 	}
 
 	return &Entity{
