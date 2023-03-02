@@ -60,14 +60,11 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 		common.TranslatedValidatorCtxMiddleware(translatedValidator),
 	)
 
-	r.Get("/healthcheck", healthcheck)
-
 	r.Post("/registration", s.account.Registration)
+	r.Get("/accounts/search", func(w http.ResponseWriter, r *http.Request) {
+		w.WriteHeader(http.StatusNotFound)
+	})
 	r.Get("/accounts/{id}", s.account.GetAccount)
 
 	return r, nil
-}
-
-func healthcheck(w http.ResponseWriter, _ *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

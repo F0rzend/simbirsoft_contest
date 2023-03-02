@@ -2,13 +2,14 @@ package account
 
 import (
 	"net/http"
+	"strings"
 
 	"github.com/F0rzend/simbirsoft_contest/src/common"
 )
 
 type RegistrationRequest struct {
-	FirstName string `json:"firstName" validate:"required,alphanum"`
-	LastName  string `json:"lastName" validate:"required,alphanum"`
+	FirstName string `json:"firstName" validate:"required"`
+	LastName  string `json:"lastName" validate:"required"`
 	Email     string `json:"email" validate:"required,email"`
 	Password  string `json:"password" validate:"required,alphanum"`
 }
@@ -18,6 +19,9 @@ func (rr *RegistrationRequest) Bind(request *http.Request) error {
 	if err != nil {
 		return err
 	}
+
+	rr.FirstName = strings.TrimSpace(rr.FirstName)
+	rr.LastName = strings.TrimSpace(rr.LastName)
 
 	return validator.ValidateStruct(rr)
 }

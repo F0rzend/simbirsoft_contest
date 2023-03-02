@@ -4,7 +4,6 @@
 package common
 
 import (
-	"encoding/json"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -13,27 +12,20 @@ import (
 )
 
 const (
-	InternalServerErrorType = "InternalServerError"
-	ValidationErrorType     = "ValidationError"
-	ConflictErrorType       = "ConflictError"
-	NotFoundErrorType       = "NotFoundError"
+	RequestBodyExpectedErrorType = "RequestBodyExpectedError"
+	InternalServerErrorType      = "InternalServerError"
+	ValidationErrorType          = "ValidationError"
+	ConflictErrorType            = "ConflictError"
+	NotFoundErrorType            = "NotFoundError"
 )
 
 func RenderError(w http.ResponseWriter, r *http.Request, err error) {
-	//nolint:errorlint
-	if renderer, ok := err.(render.Renderer); ok {
-		if renderError := render.Render(w, r, renderer); renderError != nil {
+	var httpError *HTTPError
+	if errors.As(err, &httpError) {
+		if renderError := render.Render(w, r, httpError); renderError != nil {
 			RenderError(w, r, NewInternalServerError(renderError))
 		}
 		return
-	}
-
-	jsonUnmarshalError := new(json.UnmarshalTypeError)
-	if errors.As(err, &jsonUnmarshalError) {
-		_, ok := err.(*json.UnmarshalTypeError)
-		if !ok {
-			RenderError(w, r, NewInternalServerError(errors.New("json.UnmarshalTypeError was expected")))
-		}
 	}
 
 	RenderError(w, r, NewInternalServerError(err))

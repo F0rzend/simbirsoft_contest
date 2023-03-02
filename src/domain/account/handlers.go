@@ -30,7 +30,7 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 
 	request := new(RegistrationRequest)
 
-	if err := render.Bind(r, request); err != nil {
+	if err := common.Bind(r, request); err != nil {
 		common.RenderError(w, r, err)
 		return
 	}

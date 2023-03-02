@@ -49,12 +49,13 @@ func (v *TranslatedValidator) ValidateStruct(r any) error {
 		return nil
 	}
 
-	if _, ok := err.(*validator.InvalidValidationError); ok {
+	var serverError *validator.InvalidValidationError
+	if errors.As(err, &serverError) {
 		return err
 	}
 
-	errs, ok := err.(validator.ValidationErrors)
-	if !ok {
+	var errs validator.ValidationErrors
+	if !errors.As(err, &errs) {
 		return err
 	}
 
@@ -75,12 +76,13 @@ func (v *TranslatedValidator) ValidateVar(key string, value any, tag string) err
 		return nil
 	}
 
-	if _, ok := err.(*validator.InvalidValidationError); ok {
+	var serverError *validator.InvalidValidationError
+	if errors.As(err, &serverError) {
 		return err
 	}
 
-	errs, ok := err.(validator.ValidationErrors)
-	if !ok {
+	var errs validator.ValidationErrors
+	if !errors.As(err, &errs) {
 		return err
 	}
 
