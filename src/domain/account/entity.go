@@ -10,12 +10,11 @@ type Entity struct {
 	ID        uint
 	FirstName string
 	LastName  string
-	Email     *mail.Address
+	Email     string
 }
 
 func NewEntity(id uint, firstName, lastName, email string) (*Entity, error) {
-	mailAddress, err := mail.ParseAddress(email)
-	if err != nil {
+	if _, err := mail.ParseAddress(email); err != nil {
 		return nil, common.NewValidationError(common.InvalidRequestParameter{
 			Name:   "email",
 			Reason: "email is invalid",
@@ -26,6 +25,6 @@ func NewEntity(id uint, firstName, lastName, email string) (*Entity, error) {
 		ID:        id,
 		FirstName: firstName,
 		LastName:  lastName,
-		Email:     mailAddress,
+		Email:     email,
 	}, nil
 }

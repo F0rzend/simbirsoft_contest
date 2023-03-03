@@ -61,9 +61,7 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 	)
 
 	r.Post("/registration", s.account.Registration)
-	r.Get("/accounts/search", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusNotFound)
-	})
+	r.Get("/accounts/search", s.account.Search)
 	r.Get("/accounts/{id}", s.account.GetAccount)
 
 	return r, nil

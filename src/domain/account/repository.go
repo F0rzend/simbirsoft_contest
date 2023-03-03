@@ -2,14 +2,15 @@ package account
 
 import (
 	"context"
+	"fmt"
 
+	"github.com/georgysavva/scany/v2/pgxscan"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
-	"github.com/rs/zerolog"
-)
 
-var ErrNotFound = errors.New("not found")
+	"github.com/F0rzend/simbirsoft_contest/src/common"
+)
 
 type Repository struct {
 	db *pgxpool.Pool
@@ -53,8 +54,6 @@ func (r *Repository) IsFreeEmail(ctx context.Context, email string) (bool, error
 		return false, errors.Wrap(err, "cannot check email freeness")
 	}
 
-	zerolog.Ctx(ctx).Debug().Bool("is_free", result).Str("email", email).Send()
-
 	return result, nil
 }
 
@@ -78,7 +77,7 @@ func (r *Repository) Save(
 		"id":         entity.ID,
 		"first_name": entity.FirstName,
 		"last_name":  entity.LastName,
-		"email":      entity.Email.Address,
+		"email":      entity.Email,
 		"password":   passwordHash,
 	}); err != nil {
 		return errors.Wrap(err, "error while saving the account")
@@ -102,7 +101,10 @@ func (r *Repository) GetAccount(ctx context.Context, id uint) (*Entity, error) {
 		&email,
 	); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, ErrNotFound
+			return nil, common.NewNotFoundError(
+				"Account not found.",
+				fmt.Sprintf("Account with id %d not found.", id),
+			)
 		}
 
 		return nil, errors.Wrap(err, "cannot get account by id")
@@ -114,4 +116,41 @@ func (r *Repository) GetAccount(ctx context.Context, id uint) (*Entity, error) {
 	}
 
 	return entity, nil
+}
+
+func (r *Repository) Search(
+	ctx context.Context,
+	firstName string,
+	lastName string,
+	email string,
+	from int,
+	size int,
+) ([]Entity, error) {
+	query := `
+		SELECT id, first_name, last_name, email
+		FROM account
+		WHERE ($1::varchar = '' OR first_name ILIKE concat('%', $1, '%')) AND
+			  ($2::varchar = '' OR first_name ILIKE concat('%', $2, '%')) AND
+			  ($3::varchar = '' OR email ILIKE concat('%', $3, '%'))
+		ORDER BY id
+		LIMIT $4 OFFSET $5
+	`
+
+	var entities []Entity
+	err := pgxscan.Select(
+		ctx,
+		r.db,
+		&entities,
+		query,
+		firstName,
+		lastName,
+		email,
+		size,
+		from,
+	)
+	if err != nil {
+		return nil, err
+	}
+
+	return entities, nil
 }

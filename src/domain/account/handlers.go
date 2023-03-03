@@ -51,13 +51,52 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 		ID:        entity.ID,
 		FirstName: entity.FirstName,
 		LastName:  entity.LastName,
-		Email:     entity.Email.Address,
+		Email:     entity.Email,
 	}
 
 	render.Status(r, http.StatusCreated)
 	if err := render.Render(w, r, response); err != nil {
 		common.RenderError(w, r, err)
 		return
+	}
+}
+
+func (h *Handlers) Search(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
+
+	params, err := NewSearchParameters(r)
+	if err != nil {
+		common.RenderError(w, r, err)
+		return
+	}
+
+	entities, err := h.service.Search(
+		ctx,
+		params.FirstName,
+		params.LastName,
+		params.Email,
+		params.From,
+		params.Size,
+	)
+	if err != nil {
+		common.RenderError(w, r, err)
+		return
+	}
+
+	response := make(ResponseList, len(entities))
+
+	for i, entity := range entities {
+		response[i] = &Response{
+			ID:        entity.ID,
+			FirstName: entity.FirstName,
+			LastName:  entity.LastName,
+			Email:     entity.Email,
+		}
+	}
+
+	render.Status(r, http.StatusOK)
+	if err := render.Render(w, r, response); err != nil {
+		common.RenderError(w, r, err)
 	}
 }
 
@@ -80,7 +119,7 @@ func (h *Handlers) GetAccount(w http.ResponseWriter, r *http.Request) {
 		ID:        entity.ID,
 		FirstName: entity.FirstName,
 		LastName:  entity.LastName,
-		Email:     entity.Email.Address,
+		Email:     entity.Email,
 	}
 
 	render.Status(r, http.StatusOK)
@@ -101,12 +140,12 @@ func getIDFromRequest(r *http.Request) (uint, error) {
 		})
 	}
 
-	validator, err := common.TranslatedValidatorFromRequest(r)
+	tv, err := common.TranslatedValidatorFromRequest(r)
 	if err != nil {
 		return 0, err
 	}
 
-	if err := validator.ValidateVar("id", id, "required,gt=0"); err != nil {
+	if err := tv.ValidateVar("id", id, "required,gt=0"); err != nil {
 		return 0, err
 	}
 

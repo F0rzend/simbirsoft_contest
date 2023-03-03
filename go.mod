@@ -17,6 +17,8 @@ require (
 
 require (
 	github.com/ajg/form v1.5.1 // indirect
+	github.com/georgysavva/scany/v2 v2.0.0 // indirect
+	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/jackc/chunkreader/v2 v2.0.1 // indirect
 	github.com/jackc/pgconn v1.8.0 // indirect
 	github.com/jackc/pgio v1.0.0 // indirect
@@ -30,7 +32,10 @@ require (
 	github.com/leodido/go-urn v1.2.2 // indirect
 	github.com/mattn/go-colorable v0.1.13 // indirect
 	github.com/mattn/go-isatty v0.0.17 // indirect
+	github.com/pasztorpisti/qs v0.0.0-20171216220353-8d6c33ee906c // indirect
 	github.com/rs/xid v1.4.0 // indirect
+	github.com/stephenafamo/scan v0.4.1 // indirect
+	github.com/wcamarao/pmx v0.0.0-20230213063305-be09b2874fb0 // indirect
 	golang.org/x/sync v0.1.0 // indirect
 	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect

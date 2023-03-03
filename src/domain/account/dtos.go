@@ -2,6 +2,7 @@ package account
 
 import (
 	"net/http"
+	"strconv"
 	"strings"
 
 	"github.com/F0rzend/simbirsoft_contest/src/common"
@@ -15,7 +16,7 @@ type RegistrationRequest struct {
 }
 
 func (rr *RegistrationRequest) Bind(request *http.Request) error {
-	validator, err := common.TranslatedValidatorFromRequest(request)
+	tv, err := common.TranslatedValidatorFromRequest(request)
 	if err != nil {
 		return err
 	}
@@ -23,7 +24,7 @@ func (rr *RegistrationRequest) Bind(request *http.Request) error {
 	rr.FirstName = strings.TrimSpace(rr.FirstName)
 	rr.LastName = strings.TrimSpace(rr.LastName)
 
-	return validator.ValidateStruct(rr)
+	return tv.ValidateStruct(rr)
 }
 
 type Response struct {
@@ -33,6 +34,81 @@ type Response struct {
 	Email     string `json:"email"`
 }
 
-func (rr *Response) Render(w http.ResponseWriter, r *http.Request) error {
+func (rr *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
+	return nil
+}
+
+type SearchParameters struct {
+	FirstName string `json:"firstName"`
+	LastName  string `json:"lastName"`
+	Email     string `json:"emailName"`
+	From      int    `json:"from" validate:"gte=0"`
+	Size      int    `json:"size" validate:"gt=0"`
+}
+
+func NewSearchParameters(r *http.Request) (*SearchParameters, error) {
+	tv, err := common.TranslatedValidatorFromRequest(r)
+	if err != nil {
+		return nil, err
+	}
+
+	values := r.URL.Query()
+
+	var invalid []common.InvalidRequestParameter
+
+	firstName := values.Get("firstName")
+	lastName := values.Get("lastName")
+	email := values.Get("email")
+
+	var from int
+	fromString := values.Get("from")
+	if fromString == "" {
+		from = 0
+	} else {
+		from, err = strconv.Atoi(fromString)
+		if err != nil {
+			invalid = append(invalid, common.InvalidRequestParameter{
+				Name:   "from",
+				Reason: "Must be a number",
+			})
+		}
+	}
+
+	var size int
+	sizeString := values.Get("size")
+	if sizeString == "" {
+		size = 10
+	} else {
+		size, err = strconv.Atoi(sizeString)
+		if err != nil {
+			invalid = append(invalid, common.InvalidRequestParameter{
+				Name:   "size",
+				Reason: "Must be a number",
+			})
+		}
+	}
+
+	if len(invalid) != 0 {
+		return nil, common.NewValidationError(invalid...)
+	}
+
+	params := &SearchParameters{
+		FirstName: firstName,
+		LastName:  lastName,
+		Email:     email,
+		From:      from,
+		Size:      size,
+	}
+
+	if err := tv.ValidateStruct(params); err != nil {
+		return nil, err
+	}
+
+	return params, nil
+}
+
+type ResponseList []*Response
+
+func (ResponseList) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }

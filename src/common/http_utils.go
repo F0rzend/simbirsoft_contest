@@ -37,3 +37,15 @@ func Bind(r *http.Request, body render.Binder) error {
 
 	return err
 }
+
+func RenderError(w http.ResponseWriter, r *http.Request, err error) {
+	var httpError *HTTPError
+	if errors.As(err, &httpError) {
+		if renderError := render.Render(w, r, httpError); renderError != nil {
+			RenderError(w, r, NewInternalServerError(renderError))
+		}
+		return
+	}
+
+	RenderError(w, r, NewInternalServerError(err))
+}
