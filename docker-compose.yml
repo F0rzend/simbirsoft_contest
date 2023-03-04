@@ -6,9 +6,8 @@ services:
     build:
       context: .
     depends_on:
-    - postgres
-    expose:
-    - '8080'
+      postgres:
+        condition: service_healthy
     ports:
     - "8080:8080"
     networks:
@@ -22,7 +21,8 @@ services:
     build:
       context: migrations
     depends_on:
-    - postgres
+      postgres:
+        condition: service_healthy
     networks:
     - simbirsoft.postgres.network
     env_file:
@@ -32,19 +32,24 @@ services:
     image: postgres
     container_name: simbirsoft.postgres
     volumes:
-    - simbirsoft.postgres.data:/var/lib/postgresql/data:rw
+    - /var/lib/postgresql/data
     networks:
     - simbirsoft.postgres.network
     env_file:
     - .env
     ports:
     - "127.0.0.1:5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -d $${POSTGRES_DB} -U $${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 60s
+      retries: 5
+      start_period: 10s
 
   tests:
     container_name: simbirsoft.tests
     image: mrexpen/planet_olymp_phase1
     pull_policy: always
-    restart: always
     ports:
     - "8090:8080"
     depends_on:
@@ -53,13 +58,9 @@ services:
     - simbirsoft.api.network
     environment:
       SERVER_URL: http://api:8080
-      STAGE: all
+      STAGE: 1
       # 0, 1 или 2 - запуск тестов для соответствующего этапа
       # all - запуск всех тестов из трёх доступных этапов
-
-volumes:
-  simbirsoft.postgres.data:
-    name: simbirsoft.postgres.data
 
 networks:
   simbirsoft.postgres.network:

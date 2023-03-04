@@ -16,6 +16,4 @@ WORKDIR /app
 
 COPY --from=dev /go/src/build/app_binary .
 
-EXPOSE 8080
-
 ENTRYPOINT ["./app_binary"]
