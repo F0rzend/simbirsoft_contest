@@ -1,6 +1,7 @@
 package account
 
 import (
+	"context"
 	"net/http"
 	"strconv"
 
@@ -29,7 +30,6 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
 	request := new(RegistrationRequest)
-
 	if err := common.Bind(r, request); err != nil {
 		common.RenderError(w, r, err)
 		return
@@ -55,10 +55,15 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 	}
 
 	render.Status(r, http.StatusCreated)
+
 	if err := render.Render(w, r, response); err != nil {
 		common.RenderError(w, r, err)
 		return
 	}
+}
+
+func (h *Handlers) Auth(ctx context.Context, email, password string) error {
+	return h.service.Auth(ctx, email, password)
 }
 
 func (h *Handlers) Search(w http.ResponseWriter, r *http.Request) {

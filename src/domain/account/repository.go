@@ -129,9 +129,9 @@ func (r *Repository) Search(
 	query := `
 		SELECT id, first_name, last_name, email
 		FROM account
-		WHERE ($1::varchar = '' OR first_name ILIKE concat('%', $1, '%')) AND
-			  ($2::varchar = '' OR first_name ILIKE concat('%', $2, '%')) AND
-			  ($3::varchar = '' OR email ILIKE concat('%', $3, '%'))
+		WHERE (first_name ILIKE concat('%', $1::varchar, '%')) AND
+			  (first_name ILIKE concat('%', $2::varchar, '%')) AND
+			  (email ILIKE concat('%', $3::varchar, '%'))
 		ORDER BY id
 		LIMIT $4 OFFSET $5
 	`
@@ -153,4 +153,27 @@ func (r *Repository) Search(
 	}
 
 	return entities, nil
+}
+
+func (r *Repository) GetPasswordHash(ctx context.Context, email string) ([]byte, error) {
+	query := `
+		SELECT password FROM account
+		WHERE email = @email
+	`
+
+	var hash []byte
+	if err := r.db.QueryRow(ctx, query, pgx.NamedArgs{
+		"email": email,
+	}).Scan(&hash); err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, common.NewNotFoundError(
+				"Account not found.",
+				fmt.Sprintf("Account with email %q not found.", email),
+			)
+		}
+
+		return nil, errors.Wrap(err, "cannot get account hash")
+	}
+
+	return hash, nil
 }

@@ -24,12 +24,12 @@ func main() {
 
 	apiServer, err := api.NewServer(config)
 	if err != nil {
-		panic(err)
+		logger.Fatal().Err(err).Send()
 	}
 
 	handler, err := apiServer.GetHTTPHandler(&logger)
 	if err != nil {
-		panic(err)
+		logger.Fatal().Err(err).Send()
 	}
 
 	server := http.Server{

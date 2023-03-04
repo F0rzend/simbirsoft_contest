@@ -90,3 +90,20 @@ func (s *Service) Search(
 		size,
 	)
 }
+
+func (s *Service) Auth(
+	ctx context.Context,
+	email string,
+	password string,
+) error {
+	hash, err := s.repository.GetPasswordHash(ctx, email)
+	if err != nil {
+		return err
+	}
+
+	if err := bcrypt.CompareHashAndPassword(hash, []byte(password)); err != nil {
+		return common.NewUnauthorizedError("Wrong login or password.")
+	}
+
+	return nil
+}

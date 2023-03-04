@@ -1,4 +1,4 @@
-FROM golang:1.20.1-alpine AS dev
+FROM golang:1.20.1-alpine AS build
 
 WORKDIR /go/src/build
 
@@ -14,6 +14,6 @@ FROM gcr.io/distroless/base AS app
 
 WORKDIR /app
 
-COPY --from=dev /go/src/build/app_binary .
+COPY --from=build /go/src/build/app_binary .
 
-ENTRYPOINT ["./app_binary"]
+CMD ["./app_binary"]

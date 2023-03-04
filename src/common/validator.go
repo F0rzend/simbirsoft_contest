@@ -51,12 +51,12 @@ func (v *TranslatedValidator) ValidateStruct(r any) error {
 
 	var serverError *validator.InvalidValidationError
 	if errors.As(err, &serverError) {
-		return err
+		return errors.Wrap(serverError, "cannot validate struct")
 	}
 
 	var errs validator.ValidationErrors
 	if !errors.As(err, &errs) {
-		return err
+		return errors.Wrap(err, "unexpected validation error type")
 	}
 
 	invalidParams := make([]InvalidRequestParameter, len(errs))

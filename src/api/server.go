@@ -41,6 +41,7 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 
 	r.Use(
 		middleware.Recoverer,
+
 		middleware.AllowContentType(JSONContentType),
 		render.SetContentType(render.ContentTypeJSON),
 
@@ -60,9 +61,15 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 		common.TranslatedValidatorCtxMiddleware(translatedValidator),
 	)
 
+	r.Get("/healthcheck", healthcheck)
+
 	r.Post("/registration", s.account.Registration)
 	r.Get("/accounts/search", s.account.Search)
 	r.Get("/accounts/{id}", s.account.GetAccount)
 
 	return r, nil
+}
+
+func healthcheck(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusOK)
 }

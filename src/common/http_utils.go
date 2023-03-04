@@ -1,6 +1,7 @@
 package common
 
 import (
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -16,7 +17,7 @@ func Bind(r *http.Request, body render.Binder) error {
 		return nil
 	}
 
-	jsonUnmarshalError := new(json.UnmarshalTypeError)
+	var jsonUnmarshalError *json.UnmarshalTypeError
 	if errors.As(err, &jsonUnmarshalError) {
 		return NewValidationError(InvalidRequestParameter{
 			Name: jsonUnmarshalError.Field,
@@ -48,4 +49,25 @@ func RenderError(w http.ResponseWriter, r *http.Request, err error) {
 	}
 
 	RenderError(w, r, NewInternalServerError(err))
+}
+
+type Checker func(ctx context.Context, login string, password string) error
+
+func BasicAuth(checkFn Checker) func(next http.Handler) http.Handler {
+	return func(next http.Handler) http.Handler {
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			login, password, ok := r.BasicAuth()
+			if !ok {
+				RenderError(w, r, NewUnauthorizedError("Invalid header format"))
+				return
+			}
+
+			if err := checkFn(r.Context(), login, password); err != nil {
+				RenderError(w, r, err)
+				return
+			}
+
+			next.ServeHTTP(w, r)
+		})
+	}
 }

@@ -4,6 +4,7 @@
 package common
 
 import (
+	"errors"
 	"net/http"
 
 	"github.com/go-chi/render"
@@ -16,7 +17,10 @@ const (
 	ValidationErrorType          = "ValidationError"
 	ConflictErrorType            = "ConflictError"
 	NotFoundErrorType            = "NotFoundError"
+	UnauthorizedErrorType        = "UnauthorizedError"
 )
+
+var errNotForLogging = errors.New("client side error")
 
 type HTTPError struct {
 	Type     string `json:"type"`
@@ -37,11 +41,11 @@ func (e *HTTPError) Unwrap() error {
 		return e.err
 	}
 
-	return e
+	return errNotForLogging
 }
 
 func (e *HTTPError) Render(_ http.ResponseWriter, r *http.Request) error {
-	if e.err != nil {
+	if !errors.Is(e.err, errNotForLogging) {
 		zerolog.Ctx(r.Context()).Error().Err(e.err).Send()
 	}
 
@@ -92,6 +96,15 @@ func NewNotFoundError(title, detail string) error {
 		Type:   NotFoundErrorType,
 		Status: http.StatusNotFound,
 		Title:  title,
+		Detail: detail,
+	}
+}
+
+func NewUnauthorizedError(detail string) error {
+	return &HTTPError{
+		Type:   UnauthorizedErrorType,
+		Status: http.StatusUnauthorized,
+		Title:  "You should pass correct credentials in \"Authorization\" header.",
 		Detail: detail,
 	}
 }

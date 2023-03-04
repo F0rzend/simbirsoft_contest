@@ -15,8 +15,8 @@ type RegistrationRequest struct {
 	Password  string `json:"password" validate:"required,alphanum"`
 }
 
-func (rr *RegistrationRequest) Bind(request *http.Request) error {
-	tv, err := common.TranslatedValidatorFromRequest(request)
+func (rr *RegistrationRequest) Bind(r *http.Request) error {
+	tv, err := common.TranslatedValidatorFromRequest(r)
 	if err != nil {
 		return err
 	}
