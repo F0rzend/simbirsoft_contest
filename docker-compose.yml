@@ -32,7 +32,7 @@ services:
     image: postgres
     container_name: simbirsoft.postgres
     volumes:
-    - /var/lib/postgresql/data
+    - simbirsoft.postgres.data:/var/lib/postgresql/data:rw
     networks:
     - simbirsoft.postgres.network
     env_file:
@@ -61,6 +61,10 @@ services:
       STAGE: 1
       # 0, 1 или 2 - запуск тестов для соответствующего этапа
       # all - запуск всех тестов из трёх доступных этапов
+
+volumes:
+  simbirsoft.postgres.data:
+    name: simbirsoft.postgres.data
 
 networks:
   simbirsoft.postgres.network:
