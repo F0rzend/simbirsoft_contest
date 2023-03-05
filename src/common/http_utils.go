@@ -1,12 +1,15 @@
 package common
 
 import (
-	"context"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
+	"strconv"
+	"time"
 
+	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
 	"github.com/pkg/errors"
 )
@@ -40,9 +43,13 @@ func Bind(r *http.Request, body render.Binder) error {
 }
 
 func RenderError(w http.ResponseWriter, r *http.Request, err error) {
-	var httpError *HTTPError
-	if errors.As(err, &httpError) {
-		if renderError := render.Render(w, r, httpError); renderError != nil {
+	if errors.Is(err, clientSideError) {
+		var renderer render.Renderer
+		if !errors.As(err, &renderer) {
+			RenderError(w, r, NewInternalServerError(errors.New("client side error must be renderer")))
+		}
+
+		if renderError := render.Render(w, r, renderer); renderError != nil {
 			RenderError(w, r, NewInternalServerError(renderError))
 		}
 		return
@@ -51,23 +58,105 @@ func RenderError(w http.ResponseWriter, r *http.Request, err error) {
 	RenderError(w, r, NewInternalServerError(err))
 }
 
-type Checker func(ctx context.Context, login string, password string) error
-
-func BasicAuth(checkFn Checker) func(next http.Handler) http.Handler {
-	return func(next http.Handler) http.Handler {
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			login, password, ok := r.BasicAuth()
-			if !ok {
-				RenderError(w, r, NewUnauthorizedError("Invalid header format"))
-				return
-			}
-
-			if err := checkFn(r.Context(), login, password); err != nil {
-				RenderError(w, r, err)
-				return
-			}
-
-			next.ServeHTTP(w, r)
+func GetIntFromRequest(r *http.Request, key string) (int, error) {
+	param := chi.URLParam(r, key)
+	if param == "" {
+		return 0, NewValidationError(InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("%q is required", key),
 		})
+	}
+
+	value, err := strconv.Atoi(param)
+	if err != nil {
+		return 0, NewValidationError(InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("int expected, but got %s", param),
+		})
+	}
+
+	return value, nil
+}
+
+func GetInt64FromRequest(r *http.Request, key string) (int64, error) {
+	param := chi.URLParam(r, key)
+	if param == "" {
+		return 0, NewValidationError(InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("%q is required", key),
+		})
+	}
+
+	value, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		return 0, NewValidationError(InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("int expected, but got %s", param),
+		})
+	}
+
+	return value, nil
+}
+
+func GetIntFromQuery(
+	values url.Values,
+	key string,
+	defaultValue int,
+) (int, *InvalidRequestParameter) {
+	param := values.Get(key)
+
+	if param == "" {
+		return defaultValue, nil
+	}
+
+	value, err := strconv.Atoi(param)
+	if err != nil {
+		return 0, &InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("%s must be a valid number", key),
+		}
+	}
+
+	return value, nil
+}
+
+func GetInt64FromQuery(
+	values url.Values,
+	key string,
+	defaultValue int64,
+) (int64, *InvalidRequestParameter) {
+	param := values.Get(key)
+
+	if param == "" {
+		return defaultValue, nil
+	}
+
+	value, err := strconv.ParseInt(param, 10, 64)
+	if err != nil {
+		return 0, &InvalidRequestParameter{
+			Name:   key,
+			Reason: fmt.Sprintf("%s must be a valid number", key),
+		}
+	}
+
+	return value, nil
+}
+
+func GetDatetimeFromQuery(
+	values url.Values,
+	key string,
+) (*time.Time, *InvalidRequestParameter) {
+	dateTime := values.Get(key)
+	if dateTime == "" {
+		return nil, nil
+	} else {
+		dateTime, err := time.Parse(time.RFC3339, dateTime)
+		if err != nil {
+			return nil, &InvalidRequestParameter{
+				Name:   key,
+				Reason: "must be a datetime in RFC-3339 format",
+			}
+		}
+		return &dateTime, nil
 	}
 }

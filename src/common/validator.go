@@ -1,8 +1,6 @@
 package common
 
 import (
-	"context"
-	"net/http"
 	"reflect"
 	"strings"
 
@@ -37,14 +35,32 @@ func NewTranslatedValidator() (*TranslatedValidator, error) {
 		return nil, errors.Wrap(err, "error while register validator translation")
 	}
 
-	return &TranslatedValidator{
+	tv := &TranslatedValidator{
 		validate:   validate,
 		translator: translator,
-	}, nil
+	}
+
+	if err := tv.registerValidation(
+		"gender",
+		"{0} is invalid gender",
+		validateGender,
+	); err != nil {
+		return nil, err
+	}
+
+	if err := tv.registerValidation(
+		"live-status",
+		"{0} is invalid live status",
+		validateLiveStatus,
+	); err != nil {
+		return nil, err
+	}
+
+	return tv, nil
 }
 
-func (v *TranslatedValidator) ValidateStruct(r any) error {
-	err := v.validate.Struct(r)
+func (tv *TranslatedValidator) ValidateStruct(r any) error {
+	err := tv.validate.Struct(r)
 	if err == nil {
 		return nil
 	}
@@ -63,15 +79,15 @@ func (v *TranslatedValidator) ValidateStruct(r any) error {
 	for i, err := range errs {
 		invalidParams[i] = InvalidRequestParameter{
 			Name:   err.Field(),
-			Reason: err.Translate(v.translator),
+			Reason: err.Translate(tv.translator),
 		}
 	}
 
 	return NewValidationError(invalidParams...)
 }
 
-func (v *TranslatedValidator) ValidateVar(key string, value any, tag string) error {
-	err := v.validate.Var(value, tag)
+func (tv *TranslatedValidator) ValidateVar(key string, value any, tag string) error {
+	err := tv.validate.Var(value, tag)
 	if err == nil {
 		return nil
 	}
@@ -90,36 +106,84 @@ func (v *TranslatedValidator) ValidateVar(key string, value any, tag string) err
 	for i, err := range errs {
 		invalidParams[i] = InvalidRequestParameter{
 			Name:   key,
-			Reason: strings.TrimSpace(err.Translate(v.translator)),
+			Reason: strings.TrimSpace(err.Translate(tv.translator)),
 		}
 	}
 
 	return NewValidationError(invalidParams...)
 }
 
-type ctxKey struct {
-	id string
+func (tv *TranslatedValidator) registerValidation(
+	tag string,
+	msg string,
+	validatorFunc validator.Func,
+) error {
+	if err := tv.validate.RegisterValidation(tag, validatorFunc); err != nil {
+		return err
+	}
+
+	err := tv.setErrorMessage(tag, msg)
+
+	return err
 }
 
-var translatedValidatorCtxKey = &ctxKey{"translatedValidator"}
+func (tv *TranslatedValidator) setErrorMessage(
+	tag string,
+	msg string,
+) error {
+	return tv.validate.RegisterTranslation(
+		tag,
+		tv.translator,
+		func(ut ut.Translator) error {
+			return ut.Add(tag, msg, false)
+		},
+		func(ut ut.Translator, fe validator.FieldError) string {
+			t, _ := ut.T(tag, fe.Field())
+			return t
+		},
+	)
+}
 
-type Middleware func(handler http.Handler) http.Handler
+var (
+	Genders = []string{
+		"MALE",
+		"FEMALE",
+		"OTHER",
+	}
+	LiveStatuses = []string{
+		"ALIVE",
+		"DEAD",
+	}
+)
 
-func TranslatedValidatorCtxMiddleware(translatedValidator *TranslatedValidator) Middleware {
-	return func(next http.Handler) http.Handler {
-		fn := func(w http.ResponseWriter, r *http.Request) {
-			r = r.WithContext(context.WithValue(r.Context(), translatedValidatorCtxKey, translatedValidator))
-			next.ServeHTTP(w, r)
+func validateGender(fieldLevel validator.FieldLevel) bool {
+	targetToCheck := fieldLevel.Field().String()
+
+	if targetToCheck == "" {
+		return true
+	}
+
+	for _, gender := range Genders {
+		if gender == targetToCheck {
+			return true
 		}
-		return http.HandlerFunc(fn)
 	}
+
+	return false
 }
 
-func TranslatedValidatorFromRequest(r *http.Request) (*TranslatedValidator, error) {
-	translatedValidator, ok := r.Context().Value(translatedValidatorCtxKey).(*TranslatedValidator)
-	if !ok {
-		return nil, errors.New("Cannot get validator from request context")
+func validateLiveStatus(fieldLevel validator.FieldLevel) bool {
+	targetToCheck := fieldLevel.Field().String()
+
+	if targetToCheck == "" {
+		return true
 	}
 
-	return translatedValidator, nil
+	for _, status := range LiveStatuses {
+		if status == targetToCheck {
+			return true
+		}
+	}
+
+	return false
 }

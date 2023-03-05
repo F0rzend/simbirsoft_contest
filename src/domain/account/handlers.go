@@ -15,19 +15,18 @@ type Handlers struct {
 	service *Service
 }
 
-func NewHandlers(config *common.Config) (*Handlers, error) {
-	accountService, err := NewService(config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewHandlers(di *common.DependencyInjectionContainer) *Handlers {
 	return &Handlers{
-		service: accountService,
-	}, nil
+		service: NewService(di),
+	}
 }
 
 func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
+
+	if _, _, authorized := r.BasicAuth(); authorized {
+		common.RenderError(w, r, common.NewForbiddenError("You must be logged out"))
+	}
 
 	request := new(RegistrationRequest)
 	if err := common.Bind(r, request); err != nil {
@@ -62,7 +61,7 @@ func (h *Handlers) Registration(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func (h *Handlers) Auth(ctx context.Context, email, password string) error {
+func (h *Handlers) Auth(ctx context.Context, email, password string) (int, error) {
 	return h.service.Auth(ctx, email, password)
 }
 
@@ -108,7 +107,7 @@ func (h *Handlers) Search(w http.ResponseWriter, r *http.Request) {
 func (h *Handlers) GetAccount(w http.ResponseWriter, r *http.Request) {
 	ctx := r.Context()
 
-	id, err := getIDFromRequest(r)
+	id, err := getAccountIDFromRequest(r)
 	if err != nil {
 		common.RenderError(w, r, err)
 		return
@@ -134,14 +133,14 @@ func (h *Handlers) GetAccount(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-func getIDFromRequest(r *http.Request) (uint, error) {
-	param := chi.URLParam(r, "id")
+func getAccountIDFromRequest(r *http.Request) (uint, error) {
+	param := chi.URLParam(r, "account_id")
 
 	id, err := strconv.ParseInt(param, 10, 64)
 	if err != nil {
 		return 0, common.NewValidationError(common.InvalidRequestParameter{
-			Name:   "id",
-			Reason: "id must be a number",
+			Name:   "account_id",
+			Reason: "account_id must be a number",
 		})
 	}
 

@@ -2,7 +2,6 @@ package account
 
 import (
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/F0rzend/simbirsoft_contest/src/common"
@@ -34,7 +33,7 @@ type Response struct {
 	Email     string `json:"email"`
 }
 
-func (rr *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
+func (r *Response) Render(_ http.ResponseWriter, _ *http.Request) error {
 	return nil
 }
 
@@ -60,32 +59,14 @@ func NewSearchParameters(r *http.Request) (*SearchParameters, error) {
 	lastName := values.Get("lastName")
 	email := values.Get("email")
 
-	var from int
-	fromString := values.Get("from")
-	if fromString == "" {
-		from = 0
-	} else {
-		from, err = strconv.Atoi(fromString)
-		if err != nil {
-			invalid = append(invalid, common.InvalidRequestParameter{
-				Name:   "from",
-				Reason: "Must be a number",
-			})
-		}
+	from, invalidParameter := common.GetIntFromQuery(values, "from", 0)
+	if invalidParameter != nil {
+		invalid = append(invalid, *invalidParameter)
 	}
 
-	var size int
-	sizeString := values.Get("size")
-	if sizeString == "" {
-		size = 10
-	} else {
-		size, err = strconv.Atoi(sizeString)
-		if err != nil {
-			invalid = append(invalid, common.InvalidRequestParameter{
-				Name:   "size",
-				Reason: "Must be a number",
-			})
-		}
+	size, invalidParameter := common.GetIntFromQuery(values, "from", 10)
+	if invalidParameter != nil {
+		invalid = append(invalid, *invalidParameter)
 	}
 
 	if len(invalid) != 0 {

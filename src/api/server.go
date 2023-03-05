@@ -12,23 +12,30 @@ import (
 
 	"github.com/F0rzend/simbirsoft_contest/src/common"
 	"github.com/F0rzend/simbirsoft_contest/src/domain/account"
+	"github.com/F0rzend/simbirsoft_contest/src/domain/animal"
+	"github.com/F0rzend/simbirsoft_contest/src/domain/locations"
+	"github.com/F0rzend/simbirsoft_contest/src/domain/types"
+	"github.com/F0rzend/simbirsoft_contest/src/domain/visits"
 )
 
 const JSONContentType = "application/json"
 
 type Server struct {
-	account *account.Handlers
+	account   *account.Handlers
+	animal    *animal.Handlers
+	types     *types.Handlers
+	locations *locations.Handlers
+	visits    *visits.Handlers
 }
 
-func NewServer(config *common.Config) (*Server, error) {
-	accountHandlers, err := account.NewHandlers(config)
-	if err != nil {
-		return nil, err
-	}
-
+func NewServer(di *common.DependencyInjectionContainer) *Server {
 	return &Server{
-		account: accountHandlers,
-	}, nil
+		account:   account.NewHandlers(di),
+		animal:    animal.NewHandlers(di),
+		types:     types.NewHandlers(di),
+		locations: locations.NewHandlers(di),
+		visits:    visits.NewHandlers(di),
+	}
 }
 
 func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
@@ -61,15 +68,23 @@ func (s *Server) GetHTTPHandler(logger *zerolog.Logger) (http.Handler, error) {
 		common.TranslatedValidatorCtxMiddleware(translatedValidator),
 	)
 
-	r.Get("/healthcheck", healthcheck)
-
 	r.Post("/registration", s.account.Registration)
-	r.Get("/accounts/search", s.account.Search)
-	r.Get("/accounts/{id}", s.account.GetAccount)
+
+	r.Group(func(r chi.Router) {
+		r.Use(common.BasicAuthMiddleware(s.account.Auth))
+
+		r.Get("/accounts/search", s.account.Search)
+		r.Get("/accounts/{account_id}", s.account.GetAccount)
+
+		r.Get("/animals/types/{type_id}", s.types.GetAnimalType)
+
+		r.Get("/animals/search", s.animal.Search)
+		r.Get("/animals/{animal_id}", s.animal.GetAnimal)
+
+		r.Get("/animals/{animal_id}/locations", s.visits.GetAnimalLocations)
+
+		r.Get("/locations/{location_id}", s.locations.GetLocation)
+	})
 
 	return r, nil
-}
-
-func healthcheck(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
 }

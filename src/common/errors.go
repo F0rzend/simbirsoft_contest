@@ -5,12 +5,14 @@ package common
 
 import (
 	"errors"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/render"
-	"github.com/rs/zerolog"
+	"github.com/rs/zerolog/hlog"
 )
 
+// TODO: Replace to links with documentation
 const (
 	RequestBodyExpectedErrorType = "RequestBodyExpectedError"
 	InternalServerErrorType      = "InternalServerError"
@@ -18,9 +20,11 @@ const (
 	ConflictErrorType            = "ConflictError"
 	NotFoundErrorType            = "NotFoundError"
 	UnauthorizedErrorType        = "UnauthorizedError"
+	ForbiddenErrorType           = "ForbiddenError"
 )
 
-var errNotForLogging = errors.New("client side error")
+//nolint:errname,stylecheck
+var clientSideError = errors.New("client side error")
 
 type HTTPError struct {
 	Type     string `json:"type"`
@@ -33,7 +37,13 @@ type HTTPError struct {
 }
 
 func (e *HTTPError) Error() string {
-	return e.Title
+	err := fmt.Sprintf("%s#%d", e.Type, e.Status)
+
+	if e.Title != "" {
+		err = fmt.Sprintf("%s: %s", err, e.Title)
+	}
+
+	return err
 }
 
 func (e *HTTPError) Unwrap() error {
@@ -41,14 +51,13 @@ func (e *HTTPError) Unwrap() error {
 		return e.err
 	}
 
-	return errNotForLogging
+	return clientSideError
 }
 
 func (e *HTTPError) Render(_ http.ResponseWriter, r *http.Request) error {
-	if !errors.Is(e.err, errNotForLogging) {
-		zerolog.Ctx(r.Context()).Error().Err(e.err).Send()
+	if e.err != nil {
+		hlog.FromRequest(r).Error().Err(e.err).Send()
 	}
-
 	render.Status(r, e.Status)
 
 	return nil
@@ -100,11 +109,20 @@ func NewNotFoundError(title, detail string) error {
 	}
 }
 
-func NewUnauthorizedError(detail string) error {
+func NewAuthorizationError(detail string) error {
 	return &HTTPError{
 		Type:   UnauthorizedErrorType,
 		Status: http.StatusUnauthorized,
 		Title:  "You should pass correct credentials in \"Authorization\" header.",
+		Detail: detail,
+	}
+}
+
+func NewForbiddenError(detail string) error {
+	return &HTTPError{
+		Type:   ForbiddenErrorType,
+		Status: http.StatusForbidden,
+		Title:  "Resource access denied.",
 		Detail: detail,
 	}
 }

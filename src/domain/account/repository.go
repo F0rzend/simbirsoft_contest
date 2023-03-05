@@ -16,14 +16,10 @@ type Repository struct {
 	db *pgxpool.Pool
 }
 
-func NewRepository(pool *pgxpool.Pool) (*Repository, error) {
-	if err := pool.Ping(context.Background()); err != nil {
-		return nil, errors.Wrap(err, "unable to connect to database")
-	}
-
+func NewRepository(di *common.DependencyInjectionContainer) *Repository {
 	return &Repository{
-		db: pool,
-	}, nil
+		db: di.Pool,
+	}
 }
 
 func (r *Repository) NextAccountID(ctx context.Context) (uint, error) {
@@ -155,25 +151,25 @@ func (r *Repository) Search(
 	return entities, nil
 }
 
-func (r *Repository) GetPasswordHash(ctx context.Context, email string) ([]byte, error) {
+//nolint:nonamedreturns
+func (r *Repository) GetPasswordHash(ctx context.Context, email string) (id int, hash []byte, err error) {
 	query := `
-		SELECT password FROM account
+		SELECT id, password FROM account
 		WHERE email = @email
 	`
 
-	var hash []byte
-	if err := r.db.QueryRow(ctx, query, pgx.NamedArgs{
+	if err = r.db.QueryRow(ctx, query, pgx.NamedArgs{
 		"email": email,
-	}).Scan(&hash); err != nil {
+	}).Scan(&id, &hash); err != nil {
 		if errors.Is(err, pgx.ErrNoRows) {
-			return nil, common.NewNotFoundError(
+			return 0, nil, common.NewNotFoundError(
 				"Account not found.",
 				fmt.Sprintf("Account with email %q not found.", email),
 			)
 		}
 
-		return nil, errors.Wrap(err, "cannot get account hash")
+		return 0, nil, errors.Wrap(err, "cannot get account hash")
 	}
 
-	return hash, nil
+	return id, hash, nil
 }

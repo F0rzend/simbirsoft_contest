@@ -4,7 +4,6 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/pkg/errors"
 	"golang.org/x/crypto/bcrypt"
 
@@ -15,20 +14,10 @@ type Service struct {
 	repository *Repository
 }
 
-func NewService(config *common.Config) (*Service, error) {
-	pool, err := pgxpool.New(context.Background(), config.Database.URI())
-	if err != nil {
-		return nil, errors.Wrap(err, "cannot initialise postgres connection pool")
-	}
-
-	repository, err := NewRepository(pool)
-	if err != nil {
-		return nil, err
-	}
-
+func NewService(di *common.DependencyInjectionContainer) *Service {
 	return &Service{
-		repository: repository,
-	}, nil
+		repository: NewRepository(di),
+	}
 }
 
 func (s *Service) Register(
@@ -95,15 +84,15 @@ func (s *Service) Auth(
 	ctx context.Context,
 	email string,
 	password string,
-) error {
-	hash, err := s.repository.GetPasswordHash(ctx, email)
+) (int, error) {
+	id, hash, err := s.repository.GetPasswordHash(ctx, email)
 	if err != nil {
-		return err
+		return 0, err
 	}
 
 	if err := bcrypt.CompareHashAndPassword(hash, []byte(password)); err != nil {
-		return common.NewUnauthorizedError("Wrong login or password.")
+		return 0, errors.Wrap(err, "password comparing error")
 	}
 
-	return nil
+	return id, nil
 }
